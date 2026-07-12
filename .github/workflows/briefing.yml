@@ -1,0 +1,28 @@
+name: Briefing Giornaliero
+
+# Quando far partire lo script
+on:
+  workflow_dispatch: {}          # ci permette di farlo partire manualmente, per testare
+  schedule:
+    - cron: '0 6 * * *'          # ogni giorno alle 6:00 UTC (le 7:00 o 8:00 in Italia, a seconda dell'ora legale)
+
+jobs:
+  esegui-briefing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scarica il codice del repository
+        uses: actions/checkout@v4
+
+      - name: Prepara Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Installa le librerie necessarie
+        run: pip install -r requirements.txt
+
+      - name: Esegui lo script del briefing
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python briefing.py

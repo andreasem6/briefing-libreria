@@ -1,10 +1,9 @@
 name: Briefing Giornaliero
 
-# Quando far partire lo script
 on:
-  workflow_dispatch: {}          # ci permette di farlo partire manualmente, per testare
+  workflow_dispatch: {}
   schedule:
-    - cron: '0 6 * * *'          # ogni giorno alle 6:00 UTC (le 7:00 o 8:00 in Italia, a seconda dell'ora legale)
+    - cron: '0 6 * * *'
 
 jobs:
   esegui-briefing:
@@ -22,7 +21,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Esegui lo script del briefing
-      env:
+        env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}

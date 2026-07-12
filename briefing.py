@@ -27,7 +27,15 @@ print(f"Trovate {len(ricorrenze_oggi)} ricorrenze per oggi.")
 FONTI_RSS = [
     ("Il Libraio", "https://www.illibraio.it/feed/"),
     ("ANSA Cultura", "https://www.ansa.it/sito/notizie/cultura/cultura_rss.xml"),
+    ("ANSA Cinema", "https://www.ansa.it/sito/notizie/cultura/cinema/cinema_rss.xml"),
     ("Rai News Spettacolo", "https://www.rainews.it/rss/spettacolo"),
+    ("Corriere della Sera - Cultura", "https://xml2.corriereobjects.it/rss/cultura.xml"),
+    ("La Repubblica - Cultura", "https://www.repubblica.it/rss/cultura/rss2.0.xml"),
+    ("Il Sole 24 Ore - Cultura", "https://www.ilsole24ore.com/rss/cultura.xml"),
+    ("Rolling Stone Italia", "https://www.rollingstone.it/feed/"),
+    ("Ciak Magazine", "https://www.ciakmagazine.it/feed/"),
+    ("Gruppo Mondadori (sperimentale)", "https://www.gruppomondadori.it/feed"),
+    ("Internazionale", "http://www.internazionale.it/sitemaps/rss.xml"),
 ]
 
 # Parole di "urgenza": quanto è importante/urgente la notizia (per il punteggio)

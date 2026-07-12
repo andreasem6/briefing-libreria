@@ -22,7 +22,9 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Esegui lo script del briefing
-        env:
+      env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_DESTINATARIO: ${{ secrets.EMAIL_DESTINATARIO }}
         run: python briefing.py

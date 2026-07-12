@@ -24,21 +24,28 @@ else:
     print("Nessuna ricorrenza trovata per oggi.")
 
 # --- 2. NOTIZIE DAI FEED RSS ---
-# Elenco delle fonti da controllare: (nome fonte, indirizzo feed)
 FONTI_RSS = [
     ("Il Libraio", "https://www.illibraio.it/feed/"),
     ("ANSA Cultura", "https://www.ansa.it/sito/notizie/cultura/cultura_rss.xml"),
     ("Rai News Spettacolo", "https://www.rainews.it/rss/spettacolo"),
 ]
 
-# Parole chiave che ci interessano (in minuscolo)
-PAROLE_CHIAVE = [
-    "libro", "libri", "scrittore", "scrittrice", "autore", "autrice",
-    "editoria", "editore", "premio letterario", "narrativa", "romanzo",
-    "musica", "musicista", "cantante", "album", "concerto",
-    "cinema", "film", "regista", "attore", "attrice", "festival del cinema",
-    "morto", "morta", "scomparso", "scomparsa", "anniversario"
-]
+# Parole chiave con un "peso": più alto = più importante/urgente
+PAROLE_CHIAVE = {
+    # eventi urgenti/rari -> peso alto
+    "morto": 3, "morta": 3, "scomparso": 3, "scomparsa": 3, "lutto": 3,
+    "premio strega": 3, "premio letterario": 3, "vince il premio": 3,
+    "nobel": 3,
+    # eventi importanti ma meno urgenti -> peso medio
+    "festival": 2, "salone del libro": 2, "fiera del libro": 2,
+    "anniversario": 2, "uscita": 2, "presentazione": 2,
+    # argomento generico -> peso basso (serve solo a far capire il tema)
+    "libro": 1, "libri": 1, "scrittore": 1, "scrittrice": 1,
+    "autore": 1, "autrice": 1, "editoria": 1, "editore": 1,
+    "narrativa": 1, "romanzo": 1,
+    "musica": 1, "musicista": 1, "cantante": 1, "album": 1, "concerto": 1,
+    "cinema": 1, "film": 1, "regista": 1, "attore": 1, "attrice": 1,
+}
 
 notizie_rilevanti = []
 
@@ -46,19 +53,38 @@ for nome_fonte, url_feed in FONTI_RSS:
     print(f"Leggo il feed: {nome_fonte}...")
     feed = feedparser.parse(url_feed)
 
-    for articolo in feed.entries[:15]:  # controlliamo solo i 15 articoli più recenti
+    for articolo in feed.entries[:15]:
         titolo = articolo.get("title", "")
         riassunto = articolo.get("summary", "")
         testo_completo = (titolo + " " + riassunto).lower()
 
-        # controlliamo se almeno una parola chiave è presente
-        if any(parola in testo_completo for parola in PAROLE_CHIAVE):
+        # calcoliamo il punteggio sommando i pesi di ogni parola chiave trovata
+        punteggio = 0
+        parole_trovate = []
+        for parola, peso in PAROLE_CHIAVE.items():
+            if parola in testo_completo:
+                punteggio += peso
+                parole_trovate.append(parola)
+
+        if punteggio > 0:
             notizie_rilevanti.append({
                 "fonte": nome_fonte,
                 "titolo": titolo,
-                "link": articolo.get("link", "")
+                "link": articolo.get("link", ""),
+                "punteggio": punteggio,
+                "parole_trovate": parole_trovate
             })
 
-print(f"Trovate {len(notizie_rilevanti)} notizie potenzialmente rilevanti.")
+# ordiniamo dal punteggio più alto al più basso
+notizie_rilevanti.sort(key=lambda n: n["punteggio"], reverse=True)
+
+print(f"Trovate {len(notizie_rilevanti)} notizie rilevanti, ordinate per priorità:")
 for n in notizie_rilevanti:
-    print(f"- [{n['fonte']}] {n['titolo']}")
+    # etichetta visiva in base al punteggio
+    if n["punteggio"] >= 5:
+        etichetta = "🔴 ALTA priorità"
+    elif n["punteggio"] >= 2:
+        etichetta = "🟡 media priorità"
+    else:
+        etichetta = "⚪ bassa priorità"
+    print(f"{etichetta} ({n['punteggio']} pt) - [{n['fonte']}] {n['titolo']}")

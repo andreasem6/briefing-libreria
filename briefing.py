@@ -61,7 +61,9 @@ CATEGORIE = {
         "fantascienza", "fantasy", "classico", "classici", "letteratura latina",
         "letteratura greca", "epica", "romanzo storico", "romanzo rosa", "racconti",
         "narrativa straniera", "distopia", "post-apocalittico", "horror", "gotico",
-        "spionaggio", "romanzo di formazione", "letteratura italiana", "letteratura straniera"
+        "spionaggio", "romanzo di formazione", "letteratura italiana", "letteratura straniera",
+        "premio strega", "premio campiello", "premio bancarella", "vincitore premio strega",
+        "finalista premio strega", "vincitore premio nobel letteratura", "vincitrice premio nobel letteratura"
     ],
     "Saggistica": [
         "saggio", "saggistica", "storia antica", "storia medievale",
@@ -81,7 +83,7 @@ CATEGORIE = {
         "young adult", "fiaba", "fiabe", "romance", "adolescenti", "adolescente",
         "albi illustrati", "albo illustrato", "prime letture", "letture graduate", 
         "libro illustrato", "picture book", "libro gioco", "libri giochi", "fumetto per ragazzi"
-        "young adult fiction"
+        "young adult fiction", "libri per ragazzi", "letteratura per ragazzi"
      ],
     "Manga e Comics": [
         "manga", "fumetto", "fumetti", "comic", "comics", "graphic novel",
@@ -108,6 +110,17 @@ CATEGORIE = {
 
 ORDINE_CATEGORIE = ["Narrativa", "Saggistica", "Bambini", "Manga e Comics", "Varie", "Musica e Cinema"]
 
+# Alcune fonti sono già chiaramente specializzate: diamo loro un "punto di
+# partenza" nella categoria giusta, così un articolo che menziona anche
+# parole di altre categorie non viene comunque spostato per errore.
+FONTE_CATEGORIA_DEFAULT = {
+    "Ciak Magazine": "Musica e Cinema",
+    "Rolling Stone Italia": "Musica e Cinema",
+    "ANSA Cinema": "Musica e Cinema",
+    "Rai News Spettacolo": "Musica e Cinema",
+}
+BONUS_FONTE_SPECIALIZZATA = 3  # quanto "peso extra" diamo alla categoria naturale della fonte
+
 notizie_rilevanti = []
 
 for nome_fonte, url_feed in FONTI_RSS:
@@ -118,7 +131,7 @@ for nome_fonte, url_feed in FONTI_RSS:
         riassunto = articolo.get("summary", "")
         testo_completo = (titolo + " " + riassunto).lower()
 
-        # punteggio di urgenza/importanza
+        # punteggio di urgenza/importanza (usato per l'etichetta 🔴🟡⚪)
         punteggio = 0
         for parola, peso in URGENZA.items():
             if parola in testo_completo:
@@ -127,18 +140,21 @@ for nome_fonte, url_feed in FONTI_RSS:
             if parola in testo_completo:
                 punteggio += peso
 
-        # capiamo a quale categoria appartiene: contiamo i match per categoria
+        # contiamo i match per categoria
         conteggio_categorie = {}
         for nome_categoria, parole in CATEGORIE.items():
             conteggio = sum(1 for p in parole if p in testo_completo)
             if conteggio > 0:
                 conteggio_categorie[nome_categoria] = conteggio
 
+        # applichiamo il "bonus" se la fonte ha una categoria naturale
+        categoria_naturale = FONTE_CATEGORIA_DEFAULT.get(nome_fonte)
+        if categoria_naturale:
+            conteggio_categorie[categoria_naturale] = conteggio_categorie.get(categoria_naturale, 0) + BONUS_FONTE_SPECIALIZZATA
+
         if conteggio_categorie:
-            # prendiamo la categoria con più corrispondenze
             categoria_assegnata = max(conteggio_categorie, key=conteggio_categorie.get)
         elif punteggio > 0:
-            # ha un punteggio di urgenza ma nessuna categoria specifica -> Varie
             categoria_assegnata = "Varie"
         else:
             categoria_assegnata = None

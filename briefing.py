@@ -1,7 +1,7 @@
 import os
+from datetime import date
 import feedparser
 import resend
-from datetime import date
 from supabase import create_client, Client
 
 # --- CONFIGURAZIONE ---
@@ -9,19 +9,26 @@ SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_KEY"]
 resend.api_key = os.environ["RESEND_API_KEY"]
 EMAIL_DESTINATARIO = os.environ["EMAIL_DESTINATARIO"]
+CRON_ATTIVO = os.environ.get("RUN_CRON", "")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# --- 1. RICORRENZE DI OGGI ---
 oggi = date.today()
 giorno_oggi = oggi.day
 mese_oggi = oggi.month
 data_leggibile = oggi.strftime("%d/%m/%Y")
 
-print(f"Cerco le ricorrenze per il {giorno_oggi}/{mese_oggi}...")
-risposta = supabase.table("ricorrenze").select("*").eq("giorno", giorno_oggi).eq("mese", mese_oggi).execute()
-ricorrenze_oggi = risposta.data
-print(f"Trovate {len(ricorrenze_oggi)} ricorrenze per oggi.")
+E_MATTINA = (CRON_ATTIVO == "0 5 * * *") or (CRON_ATTIVO == "")
+
+# --- 1. RICORRENZE DI OGGI (solo nell'invio del mattino) ---
+ricorrenze_oggi = []
+if E_MATTINA:
+    print(f"Cerco le ricorrenze per il {giorno_oggi}/{mese_oggi}...")
+    risposta = supabase.table("ricorrenze").select("*").eq("giorno", giorno_oggi).eq("mese", mese_oggi).execute()
+    ricorrenze_oggi = risposta.data
+    print(f"Trovate {len(ricorrenze_oggi)} ricorrenze per oggi.")
+else:
+    print("Non e' l'invio del mattino: salto le ricorrenze (gia' inviate stamattina).")
 
 # --- 2. NOTIZIE DAI FEED RSS ---
 FONTI_RSS = [
@@ -38,22 +45,19 @@ FONTI_RSS = [
     ("Internazionale", "http://www.internazionale.it/sitemaps/rss.xml"),
 ]
 
-# Parole di "urgenza": quanto è importante/urgente la notizia (per il punteggio)
 URGENZA = {
     "morto": 3, "morta": 3, "scomparso": 3, "scomparsa": 3, "lutto": 3,
-    "premio strega": 3,"premio campiello": 3,"premio bancarella": 3, 
+    "premio strega": 3, "premio campiello": 3, "premio bancarella": 3,
     "premio letterario": 3, "vince il premio": 3, "nobel": 3,
     "festival": 2, "salone del libro": 2, "fiera del libro": 2,
     "anniversario": 2, "uscita": 2, "presentazione": 2,
 }
 
-# Parole di "argomento generico": indicano solo il tema, peso basso
 ARGOMENTO_GENERICO = {
     "libro": 1, "libri": 1, "scrittore": 1, "scrittrice": 1,
     "autore": 1, "autrice": 1, "editoria": 1, "editore": 1,
 }
 
-# Parole per assegnare la MACRO-SEZIONE (categoria libreria)
 CATEGORIE = {
     "Narrativa": [
         "narrativa", "romanzo", "racconto", "poesia", "poeta", "poetessa",
@@ -70,68 +74,81 @@ CATEGORIE = {
         "storia moderna", "storia contemporanea", "geopolitica", "attualità",
         "sociologia", "psicologia", "scienza", "scienze", "filosofia",
         "religione", "spiritualità", "crescita personale", "miglioramento personale",
-        "filosofia orientale", "pedagogia", "educazione", "economia", "marketing", 
-        "management", "finanza", "economia politica", "diritto", "giurisprudenza", 
-        "politica", "teoria politica", "comunicazione", "antropologia", "etnografia", 
-        "media", "giornalismo", "disinformazione", "ecologia", "intelligenza artificiale", 
-        "informatica", "biografia", "autobiografia", "memorie", "diario", "epistolario", 
-        "critica letteraria", "saggistica letteraria", "arte", "storia dell'arte", 
+        "filosofia orientale", "pedagogia", "educazione", "economia", "marketing",
+        "management", "finanza", "economia politica", "diritto", "giurisprudenza",
+        "politica", "teoria politica", "comunicazione", "antropologia", "etnografia",
+        "media", "giornalismo", "disinformazione", "ecologia", "intelligenza artificiale",
+        "informatica", "biografia", "autobiografia", "memorie", "diario", "epistolario",
+        "critica letteraria", "saggistica letteraria", "arte", "storia dell'arte",
         "architettura", "scienze cognitive", "matematica", "astronomia", "neuroscienze"
     ],
     "Bambini": [
         "bambini", "bambino", "bambina", "ragazzi", "ragazzo", "ragazza",
         "young adult", "fiaba", "fiabe", "romance", "adolescenti", "adolescente",
-        "albi illustrati", "albo illustrato", "prime letture", "letture graduate", 
-        "libro illustrato", "picture book", "libro gioco", "libri giochi", "fumetto per ragazzi"
+        "albi illustrati", "albo illustrato", "prime letture", "letture graduate",
+        "libro illustrato", "picture book", "libro gioco", "libri giochi", "fumetto per ragazzi",
         "young adult fiction", "libri per ragazzi", "letteratura per ragazzi"
-     ],
+    ],
     "Manga e Comics": [
         "manga", "fumetto", "fumetti", "comic", "comics", "graphic novel",
-        "romanzo grafico", "bande dessinée", "bd","albo", "spillato", "volume", "tankobon",
-        "shonen", "shojo", "seinen", "josei", "kodomo","anime", "otaku", "mangaka",
-        "supereroi", "superhero", "marvel", "dc comics","bonelli", "dylan dog", 
-        "tex", "zagor", "webtoon", "manhwa", "manhua","strisce", "strip", "cartoon"
+        "romanzo grafico", "bande dessinée", "bd", "albo", "spillato", "volume", "tankobon",
+        "shonen", "shojo", "seinen", "josei", "kodomo", "anime", "otaku", "mangaka",
+        "supereroi", "superhero", "marvel", "dc comics", "bonelli", "dylan dog",
+        "tex", "zagor", "webtoon", "manhwa", "manhua", "strisce", "strip", "cartoon"
     ],
     "Varie": [
         "sport", "turismo", "viaggio", "viaggi", "cucina", "ricette", "ricetta",
         "alimentazione", "hobby", "hobbies", "tempo libero", "benessere",
-        "mente e corpo", "wellness", "guide", "guida", "fai da te", "giardinaggio", 
+        "mente e corpo", "wellness", "guide", "guida", "fai da te", "giardinaggio",
         "orto", "animali", "pet", "salute", "fitness", "mindfulness", "meditazione",
-        "fotografia", "enogastronomia", "fotografia", "moda", "design", "collezionismo"
+        "fotografia", "enogastronomia", "moda", "design", "collezionismo"
     ],
     "Musica e Cinema": [
         "musica", "musicista", "cantante", "album", "concerto", "compositore",
         "cinema", "film", "regista", "attore", "attrice", "colonna sonora",
-        "discografia", "teoria musicale", "storia della musica", "storia del cinema", 
-        "cinematografia", "critica cinematografica", "sceneggiatura", "documentario", 
+        "discografia", "teoria musicale", "storia della musica", "storia del cinema",
+        "cinematografia", "critica cinematografica", "sceneggiatura", "documentario",
         "serie tv", "televisione", "soundtrack", "performing arts"
     ],
 }
 
 ORDINE_CATEGORIE = ["Narrativa", "Saggistica", "Bambini", "Manga e Comics", "Varie", "Musica e Cinema"]
 
-# Alcune fonti sono già chiaramente specializzate: diamo loro un "punto di
-# partenza" nella categoria giusta, così un articolo che menziona anche
-# parole di altre categorie non viene comunque spostato per errore.
 FONTE_CATEGORIA_DEFAULT = {
     "Ciak Magazine": "Musica e Cinema",
     "Rolling Stone Italia": "Musica e Cinema",
     "ANSA Cinema": "Musica e Cinema",
     "Rai News Spettacolo": "Musica e Cinema",
 }
-BONUS_FONTE_SPECIALIZZATA = 3  # quanto "peso extra" diamo alla categoria naturale della fonte
+BONUS_FONTE_SPECIALIZZATA = 3
+
+# Recuperiamo i link delle notizie gia' inviate OGGI, per non ripeterle
+gia_inviate_oggi = supabase.table("notizie_giornaliere").select("link").eq("data_pubblicazione", oggi.isoformat()).execute()
+link_gia_inviati = set(r["link"] for r in gia_inviate_oggi.data if r["link"])
+print(f"Notizie gia' inviate oggi in precedenti aggiornamenti: {len(link_gia_inviati)}")
 
 notizie_rilevanti = []
 
 for nome_fonte, url_feed in FONTI_RSS:
     print(f"Leggo il feed: {nome_fonte}...")
     feed = feedparser.parse(url_feed)
-    for articolo in feed.entries[:15]:
+    for articolo in feed.entries[:20]:
+        link = articolo.get("link", "")
+
+        if link and link in link_gia_inviati:
+            continue
+
+        pubblicato_oggi = False
+        if hasattr(articolo, "published_parsed") and articolo.published_parsed:
+            data_articolo = date(*articolo.published_parsed[:3])
+            pubblicato_oggi = (data_articolo == oggi)
+        if not pubblicato_oggi:
+            continue
+
         titolo = articolo.get("title", "")
         riassunto = articolo.get("summary", "")
         testo_completo = (titolo + " " + riassunto).lower()
 
-        # punteggio di urgenza/importanza (usato per l'etichetta 🔴🟡⚪)
         punteggio = 0
         for parola, peso in URGENZA.items():
             if parola in testo_completo:
@@ -140,14 +157,12 @@ for nome_fonte, url_feed in FONTI_RSS:
             if parola in testo_completo:
                 punteggio += peso
 
-        # contiamo i match per categoria
         conteggio_categorie = {}
         for nome_categoria, parole in CATEGORIE.items():
             conteggio = sum(1 for p in parole if p in testo_completo)
             if conteggio > 0:
                 conteggio_categorie[nome_categoria] = conteggio
 
-        # applichiamo il "bonus" se la fonte ha una categoria naturale
         categoria_naturale = FONTE_CATEGORIA_DEFAULT.get(nome_fonte)
         if categoria_naturale:
             conteggio_categorie[categoria_naturale] = conteggio_categorie.get(categoria_naturale, 0) + BONUS_FONTE_SPECIALIZZATA
@@ -163,85 +178,95 @@ for nome_fonte, url_feed in FONTI_RSS:
             notizie_rilevanti.append({
                 "fonte": nome_fonte,
                 "titolo": titolo,
-                "link": articolo.get("link", ""),
+                "link": link,
                 "punteggio": punteggio,
                 "categoria": categoria_assegnata
             })
 
-print(f"Trovate {len(notizie_rilevanti)} notizie rilevanti in totale.")
+print(f"Trovate {len(notizie_rilevanti)} notizie NUOVE di oggi (non ancora inviate).")
 
-# --- 3. COSTRUZIONE DELL'EMAIL HTML ---
+# --- 3. EMAIL: la mandiamo solo se c'e' qualcosa di nuovo da dire ---
+c_e_qualcosa_da_mandare = bool(ricorrenze_oggi) or bool(notizie_rilevanti)
 
-def etichetta_priorita(punteggio):
-    if punteggio >= 5:
-        return "🔴 ALTA"
-    elif punteggio >= 2:
-        return "🟡 media"
-    else:
-        return "⚪ bassa"
-
-# blocco ricorrenze
-html_ricorrenze = ""
-if ricorrenze_oggi:
-    for r in ricorrenze_oggi:
-        html_ricorrenze += f"""
-        <div style="margin-bottom:12px; padding:10px; background:#fff8e1; border-left:4px solid #f5a623;">
-            <strong>{r['titolo']}</strong> <span style="color:#888;">({r['categoria']})</span><br>
-            <span style="font-size:14px;">{r.get('descrizione') or ''}</span><br>
-            <em style="font-size:13px; color:#555;">💡 Azione suggerita: {r.get('azione_suggerita') or '-'}</em>
-        </div>
-        """
+if not c_e_qualcosa_da_mandare:
+    print("Nessuna ricorrenza e nessuna notizia nuova: non mando email in questo aggiornamento.")
 else:
-    html_ricorrenze = "<p style='color:#888;'>Nessuna ricorrenza registrata per oggi.</p>"
+    def etichetta_priorita(punteggio):
+        if punteggio >= 5:
+            return "🔴 ALTA"
+        elif punteggio >= 2:
+            return "🟡 media"
+        else:
+            return "⚪ bassa"
 
-# blocco notizie, raggruppate per categoria
-html_notizie = ""
-for nome_categoria in ORDINE_CATEGORIE:
-    notizie_categoria = [n for n in notizie_rilevanti if n["categoria"] == nome_categoria]
-    if not notizie_categoria:
-        continue
-    # ordiniamo per priorità dentro la categoria
-    notizie_categoria.sort(key=lambda n: n["punteggio"], reverse=True)
-    # limitiamo a 8 notizie per sezione, per non rendere l'email troppo lunga
-    notizie_categoria = notizie_categoria[:8]
+    html_ricorrenze = ""
+    if ricorrenze_oggi:
+        for r in ricorrenze_oggi:
+            html_ricorrenze += f"""
+            <div style="margin-bottom:12px; padding:10px; background:#fff8e1; border-left:4px solid #f5a623;">
+                <strong>{r['titolo']}</strong> <span style="color:#888;">({r['categoria']})</span><br>
+                <span style="font-size:14px;">{r.get('descrizione') or ''}</span><br>
+                <em style="font-size:13px; color:#555;">💡 Azione suggerita: {r.get('azione_suggerita') or '-'}</em>
+            </div>
+            """
 
-    html_notizie += f"<h3 style='margin-top:24px;'>📖 {nome_categoria}</h3>"
-    for n in notizie_categoria:
-        html_notizie += f"""
-        <div style="margin-bottom:10px; padding:8px; border-bottom:1px solid #eee;">
-            {etichetta_priorita(n['punteggio'])} — <strong>{n['titolo']}</strong><br>
-            <span style="font-size:13px; color:#888;">Fonte: {n['fonte']}</span><br>
-            <a href="{n['link']}" style="font-size:13px;">Leggi l'articolo →</a>
-        </div>
-        """
+    html_notizie = ""
+    for nome_categoria in ORDINE_CATEGORIE:
+        notizie_categoria = [n for n in notizie_rilevanti if n["categoria"] == nome_categoria]
+        if not notizie_categoria:
+            continue
+        notizie_categoria.sort(key=lambda n: n["punteggio"], reverse=True)
+        notizie_categoria = notizie_categoria[:8]
+        html_notizie += f"<h3 style='margin-top:24px;'>📖 {nome_categoria}</h3>"
+        for n in notizie_categoria:
+            html_notizie += f"""
+            <div style="margin-bottom:10px; padding:8px; border-bottom:1px solid #eee;">
+                {etichetta_priorita(n['punteggio'])} — <strong>{n['titolo']}</strong><br>
+                <span style="font-size:13px; color:#888;">Fonte: {n['fonte']}</span><br>
+                <a href="{n['link']}" style="font-size:13px;">Leggi l'articolo →</a>
+            </div>
+            """
 
-if not notizie_rilevanti:
-    html_notizie = "<p style='color:#888;'>Nessuna notizia rilevante trovata oggi.</p>"
+    sezioni_html = ""
+    if html_ricorrenze:
+        sezioni_html += f"<h3>📅 Ricorrenze di oggi</h3>{html_ricorrenze}"
+    if html_notizie:
+        sezioni_html += f"<h3 style='margin-top:28px; border-top:2px solid #333; padding-top:10px;'>📰 Notizie nuove</h3>{html_notizie}"
+    else:
+        sezioni_html += "<p style='color:#888;'>Nessuna notizia nuova rispetto agli aggiornamenti precedenti di oggi.</p>"
 
-corpo_email = f"""
-<html>
-<body style="font-family: Arial, sans-serif; max-width:600px; margin:0 auto; color:#222;">
-    <h2>📚 Briefing Libreria — {data_leggibile}</h2>
+    corpo_email = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; max-width:600px; margin:0 auto; color:#222;">
+        <h2>📚 Briefing Libreria — {data_leggibile}</h2>
+        {sezioni_html}
+        <hr>
+        <p style="font-size:12px; color:#aaa;">Briefing generato automaticamente.</p>
+    </body>
+    </html>
+    """
 
-    <h3>📅 Ricorrenze di oggi</h3>
-    {html_ricorrenze}
+    params = {
+        "from": "onboarding@resend.dev",
+        "to": [EMAIL_DESTINATARIO],
+        "subject": f"📚 Briefing Libreria - {data_leggibile}",
+        "html": corpo_email,
+    }
+    email_inviata = resend.Emails.send(params)
+    print("Email inviata! ID:", email_inviata)
 
-    <h3 style="margin-top:28px; border-top:2px solid #333; padding-top:10px;">📰 Notizie per sezione</h3>
-    {html_notizie}
-
-    <hr>
-    <p style="font-size:12px; color:#aaa;">Briefing generato automaticamente ogni giorno.</p>
-</body>
-</html>
-"""
-
-# --- 4. INVIO EMAIL TRAMITE RESEND ---
-params = {
-    "from": "onboarding@resend.dev",
-    "to": [EMAIL_DESTINATARIO],
-    "subject": f"📚 Briefing Libreria - {data_leggibile}",
-    "html": corpo_email,
-}
-
-email_inviata = resend.Emails.send(params)
-print("Email inviata! ID:", email_inviata)
+# --- 4. Salviamo le notizie di questo giro, per non ripeterle nei prossimi aggiornamenti di oggi ---
+if notizie_rilevanti:
+    righe_da_salvare = [
+        {
+            "data_pubblicazione": oggi.isoformat(),
+            "fonte": n["fonte"],
+            "titolo": n["titolo"],
+            "link": n["link"],
+            "categoria": n["categoria"],
+            "punteggio": n["punteggio"],
+        }
+        for n in notizie_rilevanti
+    ]
+    supabase.table("notizie_giornaliere").insert(righe_da_salvare).execute()
+    print(f"Salvate {len(righe_da_salvare)} notizie nello storico Supabase.")

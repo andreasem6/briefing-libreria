@@ -1,11 +1,16 @@
 name: Briefing Giornaliero
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: 'Fascia oraria (mattina / mezzogiorno / sera)'
+        required: false
+        default: 'mattina'
   schedule:
-    - cron: '0 5 * * *'    # ~7:00 ora italiana (estate)
-    - cron: '0 10 * * *'   # ~12:00 ora italiana (estate)
-    - cron: '0 15 * * *'   # ~17:00 ora italiana (estate)
+    - cron: '0 5 * * *'
+    - cron: '0 10 * * *'
+    - cron: '0 15 * * *'
 
 jobs:
   esegui-briefing:
@@ -29,4 +34,5 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_DESTINATARIO: ${{ secrets.EMAIL_DESTINATARIO }}
           RUN_CRON: ${{ github.event.schedule }}
+          RUN_SLOT: ${{ github.event.inputs.slot }}
         run: python briefing.py

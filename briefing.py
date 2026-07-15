@@ -58,58 +58,80 @@ ARGOMENTO_GENERICO = {
     "autore": 1, "autrice": 1, "editoria": 1, "editore": 1,
 }
 
+# Ogni categoria ha parole "forti" (peso 2, molto specifiche di quella
+# categoria) e parole "deboli" (peso 1, che possono comparire anche in
+# articoli di altre categorie). Questo evita che parole generiche come
+# "biografia" facciano vincere la categoria sbagliata.
 CATEGORIE = {
-    "Narrativa": [
-        "narrativa", "romanzo", "racconto", "poesia", "poeta", "poetessa",
-        "teatro", "commedia", "dramma", "giallo", "thriller", "noir",
-        "fantascienza", "fantasy", "classico", "classici", "letteratura latina",
-        "letteratura greca", "epica", "romanzo storico", "romanzo rosa", "racconti",
-        "narrativa straniera", "distopia", "post-apocalittico", "horror", "gotico",
-        "spionaggio", "romanzo di formazione", "letteratura italiana", "letteratura straniera",
-        "premio strega", "premio campiello", "premio bancarella", "vincitore premio strega",
-        "finalista premio strega", "vincitore premio nobel letteratura", "vincitrice premio nobel letteratura"
-    ],
-    "Saggistica": [
-        "saggio", "saggistica", "storia antica", "storia medievale",
-        "storia moderna", "storia contemporanea", "geopolitica", "attualità",
-        "sociologia", "psicologia", "scienza", "scienze", "filosofia",
-        "religione", "spiritualità", "crescita personale", "miglioramento personale",
-        "filosofia orientale", "pedagogia", "educazione", "economia", "marketing",
-        "management", "finanza", "economia politica", "diritto", "giurisprudenza",
-        "politica", "teoria politica", "comunicazione", "antropologia", "etnografia",
-        "media", "giornalismo", "disinformazione", "ecologia", "intelligenza artificiale",
-        "informatica", "biografia", "autobiografia", "memorie", "diario", "epistolario",
-        "critica letteraria", "saggistica letteraria", "arte", "storia dell'arte",
-        "architettura", "scienze cognitive", "matematica", "astronomia", "neuroscienze"
-    ],
-    "Bambini": [
-        "bambini", "bambino", "bambina", "ragazzi", "ragazzo", "ragazza",
-        "young adult", "fiaba", "fiabe", "romance", "adolescenti", "adolescente",
-        "albi illustrati", "albo illustrato", "prime letture", "letture graduate",
-        "libro illustrato", "picture book", "libro gioco", "libri giochi", "fumetto per ragazzi",
-        "young adult fiction", "libri per ragazzi", "letteratura per ragazzi"
-    ],
-    "Manga e Comics": [
-        "manga", "fumetto", "fumetti", "comic", "comics", "graphic novel",
-        "romanzo grafico", "bande dessinée", "bd", "albo", "spillato", "volume", "tankobon",
-        "shonen", "shojo", "seinen", "josei", "kodomo", "anime", "otaku", "mangaka",
-        "supereroi", "superhero", "marvel", "dc comics", "bonelli", "dylan dog",
-        "tex", "zagor", "webtoon", "manhwa", "manhua", "strisce", "strip", "cartoon"
-    ],
-    "Varie": [
-        "sport", "turismo", "viaggio", "viaggi", "cucina", "ricette", "ricetta",
-        "alimentazione", "hobby", "hobbies", "tempo libero", "benessere",
-        "mente e corpo", "wellness", "guide", "guida", "fai da te", "giardinaggio",
-        "orto", "animali", "pet", "salute", "fitness", "mindfulness", "meditazione",
-        "fotografia", "enogastronomia", "moda", "design", "collezionismo"
-    ],
-    "Musica e Cinema": [
-        "musica", "musicista", "cantante", "album", "concerto", "compositore",
-        "cinema", "film", "regista", "attore", "attrice", "colonna sonora",
-        "discografia", "teoria musicale", "storia della musica", "storia del cinema",
-        "cinematografia", "critica cinematografica", "sceneggiatura", "documentario",
-        "serie tv", "televisione", "soundtrack", "performing arts"
-    ],
+    "Narrativa": {
+        "romanzo": 2, "poesia": 2, "poeta": 2, "poetessa": 2, "teatro": 2,
+        "commedia": 2, "dramma": 2, "giallo": 2, "thriller": 2, "noir": 2,
+        "fantascienza": 2, "fantasy": 2, "romanzo storico": 2, "romanzo rosa": 2,
+        "narrativa straniera": 2, "distopia": 2, "horror": 2, "gotico": 2,
+        "spionaggio": 2, "romanzo di formazione": 2,
+        "premio strega": 2, "premio campiello": 2, "premio bancarella": 2,
+        "vincitore premio strega": 2, "finalista premio strega": 2,
+        "vincitore premio nobel letteratura": 2, "vincitrice premio nobel letteratura": 2,
+        "narrativa": 1, "racconto": 1, "classico": 1, "classici": 1,
+        "letteratura latina": 1, "letteratura greca": 1, "epica": 1, "racconti": 1,
+        "post-apocalittico": 1, "letteratura italiana": 1, "letteratura straniera": 1,
+    },
+    "Saggistica": {
+        "saggio": 2, "saggistica": 2, "storia antica": 2, "storia medievale": 2,
+        "storia moderna": 2, "storia contemporanea": 2, "geopolitica": 2,
+        "sociologia": 2, "psicologia": 2, "filosofia": 2, "pedagogia": 2,
+        "economia politica": 2, "giurisprudenza": 2, "teoria politica": 2,
+        "antropologia": 2, "scienze cognitive": 2, "neuroscienze": 2,
+        "critica letteraria": 2, "storia dell'arte": 2,
+        "attualità": 1, "scienza": 1, "scienze": 1, "religione": 1,
+        "spiritualità": 1, "crescita personale": 1, "miglioramento personale": 1,
+        "filosofia orientale": 1, "educazione": 1, "economia": 1, "marketing": 1,
+        "management": 1, "finanza": 1, "diritto": 1, "politica": 1,
+        "comunicazione": 1, "etnografia": 1, "media": 1, "giornalismo": 1,
+        "disinformazione": 1, "ecologia": 1, "intelligenza artificiale": 1,
+        "informatica": 1, "biografia": 1, "autobiografia": 1, "memorie": 1,
+        "diario": 1, "epistolario": 1, "saggistica letteraria": 1, "arte": 1,
+        "architettura": 1, "matematica": 1, "astronomia": 1,
+    },
+    "Bambini": {
+        "bambini": 2, "bambino": 2, "bambina": 2, "young adult": 2,
+        "fiaba": 2, "fiabe": 2, "albo illustrato": 2, "albi illustrati": 2,
+        "picture book": 2, "libro illustrato": 2, "young adult fiction": 2,
+        "libri per ragazzi": 2, "letteratura per ragazzi": 2,
+        "ragazzi": 1, "ragazzo": 1, "ragazza": 1, "romance": 1,
+        "adolescenti": 1, "adolescente": 1, "prime letture": 1,
+        "letture graduate": 1, "libro gioco": 1, "libri giochi": 1,
+        "fumetto per ragazzi": 1,
+    },
+    "Manga e Comics": {
+        "manga": 2, "fumetto": 2, "fumetti": 2, "comic": 2, "comics": 2,
+        "graphic novel": 2, "romanzo grafico": 2, "tankobon": 2,
+        "shonen": 2, "shojo": 2, "seinen": 2, "josei": 2, "mangaka": 2,
+        "webtoon": 2, "manhwa": 2, "manhua": 2,
+        "bande dessinée": 1, "bd": 1, "albo": 1, "spillato": 1, "volume": 1,
+        "kodomo": 1, "anime": 1, "otaku": 1, "supereroi": 1, "superhero": 1,
+        "marvel": 1, "dc comics": 1, "bonelli": 1, "dylan dog": 1, "tex": 1,
+        "zagor": 1, "strisce": 1, "strip": 1, "cartoon": 1,
+    },
+    "Varie": {
+        "sport": 2, "turismo": 2, "cucina": 2, "ricette": 2, "ricetta": 2,
+        "giardinaggio": 2, "enogastronomia": 2, "collezionismo": 2,
+        "viaggio": 1, "viaggi": 1, "alimentazione": 1, "hobby": 1,
+        "hobbies": 1, "tempo libero": 1, "benessere": 1, "mente e corpo": 1,
+        "wellness": 1, "guide": 1, "guida": 1, "fai da te": 1, "orto": 1,
+        "animali": 1, "pet": 1, "salute": 1, "fitness": 1, "mindfulness": 1,
+        "meditazione": 1, "fotografia": 1, "moda": 1, "design": 1,
+    },
+    "Musica e Cinema": {
+        "musicista": 2, "cantante": 2, "regista": 2, "attore": 2, "attrice": 2,
+        "colonna sonora": 2, "concerto": 2, "album": 2, "compositore": 2,
+        "sceneggiatura": 2, "cinematografia": 2, "critica cinematografica": 2,
+        "discografia": 2,
+        "musica": 1, "cinema": 1, "film": 1, "storia della musica": 1,
+        "storia del cinema": 1, "documentario": 1, "serie tv": 1,
+        "televisione": 1, "soundtrack": 1, "performing arts": 1,
+        "teoria musicale": 1,
+    },
 }
 
 ORDINE_CATEGORIE = ["Narrativa", "Saggistica", "Bambini", "Manga e Comics", "Varie", "Musica e Cinema"]
@@ -122,12 +144,12 @@ FONTE_CATEGORIA_DEFAULT = {
 }
 BONUS_FONTE_SPECIALIZZATA = 3
 
-# Recuperiamo i link delle notizie gia' inviate OGGI, per non ripeterle
 gia_inviate_oggi = supabase.table("notizie_giornaliere").select("link").eq("data_pubblicazione", oggi.isoformat()).execute()
 link_gia_inviati = set(r["link"] for r in gia_inviate_oggi.data if r["link"])
 print(f"Notizie gia' inviate oggi in precedenti aggiornamenti: {len(link_gia_inviati)}")
 
 notizie_rilevanti = []
+link_visti_in_questo_giro = set()  # evita duplicati DENTRO lo stesso invio
 
 for nome_fonte, url_feed in FONTI_RSS:
     print(f"Leggo il feed: {nome_fonte}...")
@@ -137,6 +159,11 @@ for nome_fonte, url_feed in FONTI_RSS:
 
         if link and link in link_gia_inviati:
             continue
+
+        chiave_duplicato = link or articolo.get("title", "")
+        if chiave_duplicato in link_visti_in_questo_giro:
+            continue
+        link_visti_in_questo_giro.add(chiave_duplicato)
 
         pubblicato_oggi = False
         if hasattr(articolo, "published_parsed") and articolo.published_parsed:
@@ -158,10 +185,10 @@ for nome_fonte, url_feed in FONTI_RSS:
                 punteggio += peso
 
         conteggio_categorie = {}
-        for nome_categoria, parole in CATEGORIE.items():
-            conteggio = sum(1 for p in parole if p in testo_completo)
-            if conteggio > 0:
-                conteggio_categorie[nome_categoria] = conteggio
+        for nome_categoria, parole_pesi in CATEGORIE.items():
+            punti_categoria = sum(peso for parola, peso in parole_pesi.items() if parola in testo_completo)
+            if punti_categoria > 0:
+                conteggio_categorie[nome_categoria] = punti_categoria
 
         categoria_naturale = FONTE_CATEGORIA_DEFAULT.get(nome_fonte)
         if categoria_naturale:
@@ -185,7 +212,6 @@ for nome_fonte, url_feed in FONTI_RSS:
 
 print(f"Trovate {len(notizie_rilevanti)} notizie NUOVE di oggi (non ancora inviate).")
 
-# --- 3. EMAIL: la mandiamo solo se c'e' qualcosa di nuovo da dire ---
 c_e_qualcosa_da_mandare = bool(ricorrenze_oggi) or bool(notizie_rilevanti)
 
 if not c_e_qualcosa_da_mandare:
@@ -255,7 +281,6 @@ else:
     email_inviata = resend.Emails.send(params)
     print("Email inviata! ID:", email_inviata)
 
-# --- 4. Salviamo le notizie di questo giro, per non ripeterle nei prossimi aggiornamenti di oggi ---
 if notizie_rilevanti:
     righe_da_salvare = [
         {

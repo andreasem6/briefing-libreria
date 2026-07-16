@@ -10,6 +10,7 @@ SUPABASE_KEY = os.environ["SUPABASE_KEY"]
 resend.api_key = os.environ["RESEND_API_KEY"]
 EMAIL_DESTINATARIO = os.environ["EMAIL_DESTINATARIO"]
 CRON_ATTIVO = os.environ.get("RUN_CRON", "")
+RUN_SLOT = os.environ.get("RUN_SLOT", "mattina")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -18,7 +19,7 @@ giorno_oggi = oggi.day
 mese_oggi = oggi.month
 data_leggibile = oggi.strftime("%d/%m/%Y")
 
-E_MATTINA = (CRON_ATTIVO == "0 5 * * *") or (CRON_ATTIVO == "")
+E_MATTINA = (CRON_ATTIVO == "0 5 * * *") or (RUN_SLOT == "mattina")
 
 # --- 1. RICORRENZE DI OGGI (solo nell'invio del mattino) ---
 ricorrenze_oggi = []

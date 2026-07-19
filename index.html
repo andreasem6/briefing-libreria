@@ -49,6 +49,27 @@
     margin-right: 4px;
   }
 
+  #filtro-categorie {
+    max-width: 900px;
+    margin: 10px auto;
+    background: white;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+  }
+  #filtro-categorie .titolo-filtro {
+    font-weight: bold;
+    margin-bottom: 6px;
+  }
+  #filtro-categorie label {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 12px;
+    margin-bottom: 6px;
+    cursor: pointer;
+  }
+  #filtro-categorie input { margin-right: 4px; }
+
   #bottone-aggiungi {
     display: block;
     max-width: 900px;
@@ -113,6 +134,15 @@
     font-size: 14px;
     display: none;
   }
+  #btn-elimina-evento {
+    margin-top: 10px;
+    padding: 8px 14px;
+    background: #c0392b;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+  }
 </style>
 </head>
 <body>
@@ -121,10 +151,20 @@
 
 <div id="legenda">
   <span><span class="pallino" style="background:#f5a623;"></span>Ricorrenze</span>
-  <span><span class="pallino" style="background:#c0392b;"></span>Alta priorità</span>
-  <span><span class="pallino" style="background:#e0a800;"></span>Media priorità</span>
-  <span><span class="pallino" style="background:#999;"></span>Bassa priorità</span>
+  <span><span class="pallino" style="background:#c0392b;"></span>Notizie: alta priorità</span>
+  <span><span class="pallino" style="background:#e0a800;"></span>Notizie: media priorità</span>
+  <span><span class="pallino" style="background:#999;"></span>Notizie: bassa priorità</span>
   <span><span class="pallino" style="background:#2f6f4f;"></span>Evento personale</span>
+</div>
+
+<div id="filtro-categorie">
+  <div class="titolo-filtro">📂 Mostra notizie di:</div>
+  <label><input type="checkbox" class="filtro-cat" value="Narrativa" checked> 📖 Narrativa</label>
+  <label><input type="checkbox" class="filtro-cat" value="Saggistica" checked> 🧠 Saggistica</label>
+  <label><input type="checkbox" class="filtro-cat" value="Bambini" checked> 🧒 Bambini</label>
+  <label><input type="checkbox" class="filtro-cat" value="Manga e Comics" checked> 🎨 Manga e Comics</label>
+  <label><input type="checkbox" class="filtro-cat" value="Varie" checked> 🗂️ Varie</label>
+  <label><input type="checkbox" class="filtro-cat" value="Musica e Cinema" checked> 🎬 Musica e Cinema</label>
 </div>
 
 <div id="calendario"></div>
@@ -150,7 +190,7 @@
       <option value="Bambini">Bambini</option>
       <option value="Manga e Comics">Manga e Comics</option>
       <option value="Musica e Cinema">Musica e Cinema</option>
-      <option value="varie" selected>Varie</option>
+      <option value="Varie" selected>Varie</option>
     </select>
 
     <label>Descrizione (facoltativa)</label>
@@ -180,19 +220,35 @@ const COLORI_PRIORITA = {
   bassa: "#999999"
 };
 
+const EMOJI_CATEGORIA = {
+  "Narrativa": "📖",
+  "Saggistica": "🧠",
+  "Bambini": "🧒",
+  "Manga e Comics": "🎨",
+  "Varie": "🗂️",
+  "Musica e Cinema": "🎬"
+};
+
 function coloreNotizia(punteggio) {
   if (punteggio >= 5) return COLORI_PRIORITA.alta;
   if (punteggio >= 2) return COLORI_PRIORITA.media;
   return COLORI_PRIORITA.bassa;
 }
 
+function emojiCategoria(categoria) {
+  return EMOJI_CATEGORIA[categoria] || "📰";
+}
+
+let datiRicorrenze = [];
+let datiNotizie = [];
+let datiManuali = [];
+
 function costruisciEventiRicorrenze(righe) {
   const annoCorrente = new Date().getFullYear();
-  const eventi = [];
-  righe.forEach(function (r) {
+  return righe.map(function (r) {
     const mese = String(r.mese).padStart(2, "0");
     const giorno = String(r.giorno).padStart(2, "0");
-    eventi.push({
+    return {
       title: "📅 " + r.titolo,
       start: annoCorrente + "-" + mese + "-" + giorno,
       allDay: true,
@@ -204,32 +260,34 @@ function costruisciEventiRicorrenze(righe) {
         azione: r.azione_suggerita,
         categoria: r.categoria
       }
-    });
-  });
-  return eventi;
-}
-
-function costruisciEventiNotizie(righe) {
-  return righe.map(function (n) {
-    return {
-      title: "📰 " + n.titolo,
-      start: n.data_pubblicazione,
-      allDay: true,
-      backgroundColor: coloreNotizia(n.punteggio),
-      borderColor: coloreNotizia(n.punteggio),
-      extendedProps: {
-        tipo: "notizia",
-        fonte: n.fonte,
-        link: n.link,
-        categoria: n.categoria
-      }
     };
   });
+}
+
+function costruisciEventiNotizie(righe, categorieVisibili) {
+  return righe
+    .filter(function (n) { return categorieVisibili.has(n.categoria); })
+    .map(function (n) {
+      return {
+        title: emojiCategoria(n.categoria) + " " + n.titolo,
+        start: n.data_pubblicazione,
+        allDay: true,
+        backgroundColor: coloreNotizia(n.punteggio),
+        borderColor: coloreNotizia(n.punteggio),
+        extendedProps: {
+          tipo: "notizia",
+          fonte: n.fonte,
+          link: n.link,
+          categoria: n.categoria
+        }
+      };
+    });
 }
 
 function costruisciEventiManuali(righe) {
   return righe.map(function (e) {
     return {
+      id: "manuale-" + e.id,
       title: "📌 " + e.titolo,
       start: e.data_evento,
       allDay: true,
@@ -237,6 +295,7 @@ function costruisciEventiManuali(righe) {
       borderColor: "#2f6f4f",
       extendedProps: {
         tipo: "manuale",
+        idEvento: e.id,
         descrizione: e.descrizione,
         categoria: e.categoria
       }
@@ -244,28 +303,56 @@ function costruisciEventiManuali(righe) {
   });
 }
 
+function categorieSelezionate() {
+  const checkbox = document.querySelectorAll(".filtro-cat:checked");
+  const insieme = new Set();
+  checkbox.forEach(function (c) { insieme.add(c.value); });
+  return insieme;
+}
+
+function ricostruisciTuttiGliEventi() {
+  const categorieVisibili = categorieSelezionate();
+  let eventi = [];
+  eventi = eventi.concat(costruisciEventiRicorrenze(datiRicorrenze));
+  eventi = eventi.concat(costruisciEventiNotizie(datiNotizie, categorieVisibili));
+  eventi = eventi.concat(costruisciEventiManuali(datiManuali));
+  return eventi;
+}
+
 let calendario;
 
-async function caricaEventi() {
+async function caricaDatiERicostruisci() {
   const [ricorrenzeRes, notizieRes, manualiRes] = await Promise.all([
     supabaseClient.from("ricorrenze").select("*"),
     supabaseClient.from("notizie_giornaliere").select("*"),
     supabaseClient.from("eventi_manuali").select("*")
   ]);
 
-  let tuttiGliEventi = [];
+  datiRicorrenze = ricorrenzeRes.data || [];
+  datiNotizie = notizieRes.data || [];
+  datiManuali = manualiRes.data || [];
 
-  if (ricorrenzeRes.data) {
-    tuttiGliEventi = tuttiGliEventi.concat(costruisciEventiRicorrenze(ricorrenzeRes.data));
-  }
-  if (notizieRes.data) {
-    tuttiGliEventi = tuttiGliEventi.concat(costruisciEventiNotizie(notizieRes.data));
-  }
-  if (manualiRes.data) {
-    tuttiGliEventi = tuttiGliEventi.concat(costruisciEventiManuali(manualiRes.data));
+  const eventi = ricostruisciTuttiGliEventi();
+  calendario.removeAllEvents();
+  calendario.addEventSource(eventi);
+}
+
+async function eliminaEvento(idEvento) {
+  const codice = window.prompt("Inserisci il codice di accesso per eliminare questo evento:");
+  if (!codice) return;
+
+  const { error } = await supabaseClient.rpc("elimina_evento_manuale", {
+    p_id: idEvento,
+    p_codice: codice
+  });
+
+  if (error) {
+    alert("Errore: " + error.message);
+    return;
   }
 
-  return tuttiGliEventi;
+  document.getElementById("dettaglio-evento").style.display = "none";
+  await caricaDatiERicostruisci();
 }
 
 function mostraDettaglio(info) {
@@ -283,15 +370,20 @@ function mostraDettaglio(info) {
     }
   } else if (p.tipo === "manuale") {
     html += (p.descrizione || "");
+    html += '<br><button id="btn-elimina-evento">🗑️ Elimina evento</button>';
   }
 
   box.innerHTML = html;
   box.style.display = "block";
+
+  if (p.tipo === "manuale") {
+    document.getElementById("btn-elimina-evento").addEventListener("click", function () {
+      eliminaEvento(p.idEvento);
+    });
+  }
 }
 
 document.addEventListener("DOMContentLoaded", async function () {
-  const eventi = await caricaEventi();
-
   const calendarEl = document.getElementById("calendario");
   calendario = new FullCalendar.Calendar(calendarEl, {
     initialView: window.innerWidth < 600 ? "listWeek" : "dayGridMonth",
@@ -302,10 +394,20 @@ document.addEventListener("DOMContentLoaded", async function () {
       center: "title",
       right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek"
     },
-    events: eventi,
+    events: [],
     eventClick: mostraDettaglio
   });
   calendario.render();
+
+  await caricaDatiERicostruisci();
+
+  document.querySelectorAll(".filtro-cat").forEach(function (checkbox) {
+    checkbox.addEventListener("change", function () {
+      const eventi = ricostruisciTuttiGliEventi();
+      calendario.removeAllEvents();
+      calendario.addEventSource(eventi);
+    });
+  });
 
   const overlay = document.getElementById("overlay");
   document.getElementById("bottone-aggiungi").addEventListener("click", function () {
@@ -350,9 +452,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     msg.textContent = "Evento salvato!";
     msg.style.color = "#2f6f4f";
 
-    const nuoviEventi = await caricaEventi();
-    calendario.removeAllEvents();
-    calendario.addEventSource(nuoviEventi);
+    await caricaDatiERicostruisci();
 
     setTimeout(function () {
       overlay.style.display = "none";

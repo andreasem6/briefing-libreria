@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Calendario Libreria</title>
+
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, Arial, sans-serif;
+    margin: 0;
+    padding: 10px;
+    background: #f7f5f2;
+    color: #222;
+  }
+  h1 {
+    font-size: 20px;
+    margin: 4px 0 12px 0;
+    text-align: center;
+  }
+  #calendario {
+    max-width: 900px;
+    margin: 0 auto;
+    background: white;
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  }
+  .fc-event { cursor: pointer; font-size: 12px; }
+
+  #legenda {
+    max-width: 900px;
+    margin: 10px auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 12px;
+  }
+  .pallino {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 4px;
+  }
+
+  #bottone-aggiungi {
+    display: block;
+    max-width: 900px;
+    margin: 14px auto;
+    padding: 12px;
+    background: #2f6f4f;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    width: 100%;
+  }
+
+  #overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+  }
+  #form-box {
+    background: white;
+    padding: 18px;
+    border-radius: 10px;
+    max-width: 400px;
+    width: 100%;
+  }
+  #form-box label { display: block; margin-top: 10px; font-size: 13px; font-weight: bold; }
+  #form-box input, #form-box select, #form-box textarea {
+    width: 100%;
+    padding: 8px;
+    margin-top: 4px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  #form-box .azioni {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  #form-box button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  #btn-salva { background: #2f6f4f; color: white; }
+  #btn-annulla { background: #ddd; color: #222; }
+  #messaggio-form { font-size: 13px; margin-top: 8px; min-height: 16px; }
+
+  #dettaglio-evento {
+    max-width: 900px;
+    margin: 10px auto;
+    background: white;
+    padding: 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<h1>📚 Calendario Libreria</h1>
+
+<div id="legenda">
+  <span><span class="pallino" style="background:#f5a623;"></span>Ricorrenze</span>
+  <span><span class="pallino" style="background:#c0392b;"></span>Alta priorità</span>
+  <span><span class="pallino" style="background:#e0a800;"></span>Media priorità</span>
+  <span><span class="pallino" style="background:#999;"></span>Bassa priorità</span>
+  <span><span class="pallino" style="background:#2f6f4f;"></span>Evento personale</span>
+</div>
+
+<div id="calendario"></div>
+
+<div id="dettaglio-evento"></div>
+
+<button id="bottone-aggiungi">+ Aggiungi evento</button>
+
+<div id="overlay">
+  <div id="form-box">
+    <h3 style="margin-top:0;">Nuovo evento</h3>
+
+    <label>Data</label>
+    <input type="date" id="f-data">
+
+    <label>Titolo</label>
+    <input type="text" id="f-titolo" placeholder="es. Presentazione libro X">
+
+    <label>Categoria</label>
+    <select id="f-categoria">
+      <option value="Narrativa">Narrativa</option>
+      <option value="Saggistica">Saggistica</option>
+      <option value="Bambini">Bambini</option>
+      <option value="Manga e Comics">Manga e Comics</option>
+      <option value="Musica e Cinema">Musica e Cinema</option>
+      <option value="varie" selected>Varie</option>
+    </select>
+
+    <label>Descrizione (facoltativa)</label>
+    <textarea id="f-descrizione" rows="3"></textarea>
+
+    <label>Codice di accesso</label>
+    <input type="password" id="f-codice" placeholder="Il tuo codice segreto">
+
+    <div id="messaggio-form"></div>
+
+    <div class="azioni">
+      <button id="btn-annulla">Annulla</button>
+      <button id="btn-salva">Salva evento</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://muflzbvqulkptdixsiqp.supabase.co";
+const SUPABASE_KEY = "sb_publishable_4ZDAnB47zNH4a09fpJMHrQ_QghD0rbQ";
+
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const COLORI_PRIORITA = {
+  alta: "#c0392b",
+  media: "#e0a800",
+  bassa: "#999999"
+};
+
+function coloreNotizia(punteggio) {
+  if (punteggio >= 5) return COLORI_PRIORITA.alta;
+  if (punteggio >= 2) return COLORI_PRIORITA.media;
+  return COLORI_PRIORITA.bassa;
+}
+
+function costruisciEventiRicorrenze(righe) {
+  const annoCorrente = new Date().getFullYear();
+  const eventi = [];
+  righe.forEach(function (r) {
+    const mese = String(r.mese).padStart(2, "0");
+    const giorno = String(r.giorno).padStart(2, "0");
+    eventi.push({
+      title: "📅 " + r.titolo,
+      start: annoCorrente + "-" + mese + "-" + giorno,
+      allDay: true,
+      backgroundColor: "#f5a623",
+      borderColor: "#f5a623",
+      extendedProps: {
+        tipo: "ricorrenza",
+        descrizione: r.descrizione,
+        azione: r.azione_suggerita,
+        categoria: r.categoria
+      }
+    });
+  });
+  return eventi;
+}
+
+function costruisciEventiNotizie(righe) {
+  return righe.map(function (n) {
+    return {
+      title: "📰 " + n.titolo,
+      start: n.data_pubblicazione,
+      allDay: true,
+      backgroundColor: coloreNotizia(n.punteggio),
+      borderColor: coloreNotizia(n.punteggio),
+      extendedProps: {
+        tipo: "notizia",
+        fonte: n.fonte,
+        link: n.link,
+        categoria: n.categoria
+      }
+    };
+  });
+}
+
+function costruisciEventiManuali(righe) {
+  return righe.map(function (e) {
+    return {
+      title: "📌 " + e.titolo,
+      start: e.data_evento,
+      allDay: true,
+      backgroundColor: "#2f6f4f",
+      borderColor: "#2f6f4f",
+      extendedProps: {
+        tipo: "manuale",
+        descrizione: e.descrizione,
+        categoria: e.categoria
+      }
+    };
+  });
+}
+
+let calendario;
+
+async function caricaEventi() {
+  const [ricorrenzeRes, notizieRes, manualiRes] = await Promise.all([
+    supabaseClient.from("ricorrenze").select("*"),
+    supabaseClient.from("notizie_giornaliere").select("*"),
+    supabaseClient.from("eventi_manuali").select("*")
+  ]);
+
+  let tuttiGliEventi = [];
+
+  if (ricorrenzeRes.data) {
+    tuttiGliEventi = tuttiGliEventi.concat(costruisciEventiRicorrenze(ricorrenzeRes.data));
+  }
+  if (notizieRes.data) {
+    tuttiGliEventi = tuttiGliEventi.concat(costruisciEventiNotizie(notizieRes.data));
+  }
+  if (manualiRes.data) {
+    tuttiGliEventi = tuttiGliEventi.concat(costruisciEventiManuali(manualiRes.data));
+  }
+
+  return tuttiGliEventi;
+}
+
+function mostraDettaglio(info) {
+  const p = info.event.extendedProps;
+  const box = document.getElementById("dettaglio-evento");
+  let html = "<strong>" + info.event.title + "</strong><br>";
+
+  if (p.tipo === "ricorrenza") {
+    html += (p.descrizione ? p.descrizione + "<br>" : "");
+    html += (p.azione ? "💡 Azione suggerita: " + p.azione : "");
+  } else if (p.tipo === "notizia") {
+    html += "Fonte: " + p.fonte + "<br>";
+    if (p.link) {
+      html += '<a href="' + p.link + '" target="_blank">Leggi l\'articolo →</a>';
+    }
+  } else if (p.tipo === "manuale") {
+    html += (p.descrizione || "");
+  }
+
+  box.innerHTML = html;
+  box.style.display = "block";
+}
+
+document.addEventListener("DOMContentLoaded", async function () {
+  const eventi = await caricaEventi();
+
+  const calendarEl = document.getElementById("calendario");
+  calendario = new FullCalendar.Calendar(calendarEl, {
+    initialView: window.innerWidth < 600 ? "listWeek" : "dayGridMonth",
+    locale: "it",
+    height: "auto",
+    headerToolbar: {
+      left: "prev,next today",
+      center: "title",
+      right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek"
+    },
+    events: eventi,
+    eventClick: mostraDettaglio
+  });
+  calendario.render();
+
+  const overlay = document.getElementById("overlay");
+  document.getElementById("bottone-aggiungi").addEventListener("click", function () {
+    document.getElementById("messaggio-form").textContent = "";
+    overlay.style.display = "flex";
+  });
+  document.getElementById("btn-annulla").addEventListener("click", function () {
+    overlay.style.display = "none";
+  });
+
+  document.getElementById("btn-salva").addEventListener("click", async function () {
+    const data = document.getElementById("f-data").value;
+    const titolo = document.getElementById("f-titolo").value.trim();
+    const categoria = document.getElementById("f-categoria").value;
+    const descrizione = document.getElementById("f-descrizione").value.trim();
+    const codice = document.getElementById("f-codice").value;
+    const msg = document.getElementById("messaggio-form");
+
+    if (!data || !titolo || !codice) {
+      msg.textContent = "Compila almeno data, titolo e codice di accesso.";
+      msg.style.color = "#c0392b";
+      return;
+    }
+
+    msg.textContent = "Salvataggio in corso...";
+    msg.style.color = "#555";
+
+    const { error } = await supabaseClient.rpc("inserisci_evento_manuale", {
+      p_data: data,
+      p_titolo: titolo,
+      p_categoria: categoria,
+      p_descrizione: descrizione,
+      p_codice: codice
+    });
+
+    if (error) {
+      msg.textContent = "Errore: " + error.message;
+      msg.style.color = "#c0392b";
+      return;
+    }
+
+    msg.textContent = "Evento salvato!";
+    msg.style.color = "#2f6f4f";
+
+    const nuoviEventi = await caricaEventi();
+    calendario.removeAllEvents();
+    calendario.addEventSource(nuoviEventi);
+
+    setTimeout(function () {
+      overlay.style.display = "none";
+    }, 900);
+  });
+});
+</script>
+
+</body>
+</html>

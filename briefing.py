@@ -283,16 +283,19 @@ else:
     print("Email inviata! ID:", email_inviata)
 
 if notizie_rilevanti:
-    righe_da_salvare = [
-        {
-            "data_pubblicazione": oggi.isoformat(),
-            "fonte": n["fonte"],
-            "titolo": n["titolo"],
-            "link": n["link"],
-            "categoria": n["categoria"],
-            "punteggio": n["punteggio"],
-        }
-        for n in notizie_rilevanti
-    ]
+    ORARI_SLOT = {"mattina": "07:00", "mezzogiorno": "12:00", "sera": "17:00"}
+
+righe_da_salvare = [
+    {
+        "data_pubblicazione": oggi.isoformat(),
+        "fonte": n["fonte"],
+        "titolo": n["titolo"],
+        "link": n["link"],
+        "categoria": n["categoria"],
+        "punteggio": n["punteggio"],
+        "fascia": ORARI_SLOT.get(RUN_SLOT, "07:00"),
+    }
+    for n in notizie_rilevanti
+]
     supabase.table("notizie_giornaliere").insert(righe_da_salvare).execute()
     print(f"Salvate {len(righe_da_salvare)} notizie nello storico Supabase.")

@@ -268,10 +268,11 @@ function costruisciEventiNotizie(righe, categorieVisibili) {
   return righe
     .filter(function (n) { return categorieVisibili.has(n.categoria); })
     .map(function (n) {
+      const orario = n.fascia || "07:00";
       return {
         title: emojiCategoria(n.categoria) + " " + n.titolo,
-        start: n.data_pubblicazione,
-        allDay: true,
+        start: n.data_pubblicazione + "T" + orario + ":00",
+        allDay: false,
         backgroundColor: coloreNotizia(n.punteggio),
         borderColor: coloreNotizia(n.punteggio),
         extendedProps: {

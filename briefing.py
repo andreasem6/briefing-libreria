@@ -59,10 +59,6 @@ ARGOMENTO_GENERICO = {
     "autore": 1, "autrice": 1, "editoria": 1, "editore": 1,
 }
 
-# Ogni categoria ha parole "forti" (peso 2, molto specifiche di quella
-# categoria) e parole "deboli" (peso 1, che possono comparire anche in
-# articoli di altre categorie). Questo evita che parole generiche come
-# "biografia" facciano vincere la categoria sbagliata.
 CATEGORIE = {
     "Narrativa": {
         "romanzo": 2, "poesia": 2, "poeta": 2, "poetessa": 2, "teatro": 2,
@@ -150,7 +146,7 @@ link_gia_inviati = set(r["link"] for r in gia_inviate_oggi.data if r["link"])
 print(f"Notizie gia' inviate oggi in precedenti aggiornamenti: {len(link_gia_inviati)}")
 
 notizie_rilevanti = []
-link_visti_in_questo_giro = set()  # evita duplicati DENTRO lo stesso invio
+link_visti_in_questo_giro = set()
 
 for nome_fonte, url_feed in FONTI_RSS:
     print(f"Leggo il feed: {nome_fonte}...")
@@ -282,20 +278,21 @@ else:
     email_inviata = resend.Emails.send(params)
     print("Email inviata! ID:", email_inviata)
 
+# --- 4. Salviamo le notizie di questo giro, per non ripeterle nei prossimi aggiornamenti di oggi ---
 if notizie_rilevanti:
     ORARI_SLOT = {"mattina": "07:00", "mezzogiorno": "12:00", "sera": "17:00"}
 
-righe_da_salvare = [
-    {
-        "data_pubblicazione": oggi.isoformat(),
-        "fonte": n["fonte"],
-        "titolo": n["titolo"],
-        "link": n["link"],
-        "categoria": n["categoria"],
-        "punteggio": n["punteggio"],
-        "fascia": ORARI_SLOT.get(RUN_SLOT, "07:00"),
-    }
-    for n in notizie_rilevanti
-]
+    righe_da_salvare = [
+        {
+            "data_pubblicazione": oggi.isoformat(),
+            "fonte": n["fonte"],
+            "titolo": n["titolo"],
+            "link": n["link"],
+            "categoria": n["categoria"],
+            "punteggio": n["punteggio"],
+            "fascia": ORARI_SLOT.get(RUN_SLOT, "07:00"),
+        }
+        for n in notizie_rilevanti
+    ]
     supabase.table("notizie_giornaliere").insert(righe_da_salvare).execute()
     print(f"Salvate {len(righe_da_salvare)} notizie nello storico Supabase.")
